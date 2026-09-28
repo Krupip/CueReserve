@@ -1,10 +1,4 @@
-# Ide Rekayasa Perangkat Lunak (RPL)
-
-Dokumen ini berisi kumpulan ide dan rancangan spesifikasi awal untuk pengembangan proyek Rekayasa Perangkat Lunak (RPL). Dokumen ini mencakup deskripsi masalah, profil pengguna, arsitektur alur kerja, daftar fitur inti (MVP), integrasi sistem pihak ketiga, serta kriteria keberhasilan aplikasi.
-
----
-
-## CueReserve: Sistem Reservasi Meja Biliar Online Terintegrasi Payment Gateway (DP)
+# CueReserve: Sistem Reservasi Meja Biliar Online Terintegrasi Payment Gateway (DP)
 
 ### Deskripsi Masalah
 Pengelolaan operasional *billiard pool/lounge* umumnya masih mengandalkan sistem *walk-in* atau reservasi manual melalui pesan instan (WhatsApp) dan buku catatan kasir. Metode konvensional ini menimbulkan sejumlah kendala:
@@ -50,10 +44,35 @@ Pengelolaan operasional *billiard pool/lounge* umumnya masih mengandalkan sistem
 
 ---
 
-### Integrasi Eksternal & Lingkungan Pengembangan
-* **Payment Gateway API:** Midtrans Snap API (Sandbox Environment).
-* **Payment Tunneling (Testing Localhost):** Ngrok / Cloudflare Tunnel untuk penanganan Webhook Notifikasi HTTP POST.
-* **Metode Pembayaran Utama:** QRIS Dinamis dan Bank Virtual Account (Simulasi Sandbox).
+### Tech Stack yang Digunakan dan Fungsinya
+**Backend & Framework: Laravel 11(PHP)**
+Untuk mengelola proses registrasi dan otentikasi agar riwayat booking user tersimpan dengan aman; memproses permintaan booking, mengecek ketersediaan meja berdasarkan filter waktu dan jenis, serta mencegah terjadinya double booking; menyediakan panel untuk Admin agar bisa mencatat booking on the spot; memfasilitasi interaksi dengan database dan payment gateway.
+
+**Database: MySQL**
+Menyimpan seluruh data secara terstruktur dengan sistem relasional yang kuat. Seperti menyimpan data user (profil, password yang dienkripsi); menyimpan data meja biliard (nomor meja, jenis meja, status saat ini); mencatat transaksi dan riwayat booking (waktu mulai, waktu selesai, total harga, status DP); memastikan konsistensi data, yang sangat krusial agar tidak ada dua orang yang memesan meja yang sama di waktu yang sama;
+
+**Frontend & UI: TALL Stack (Tailwind CSS, Alpine.js, Laravel Blade)**
+Membangun antarmuka (User Interface) yang interaktif, responsif, dan mudah digunakan oleh user maupun admin.
+* **Tailwind CSS:** Untuk styling dan membuat tampilan website dengan cepat. Membuat tampilan tetap rapi baik saat dibuka di laptop maupun smartphone.
+* **Laravel Blade:** Mesin template dari Laravel untuk merender data dari backend ke halaman HTML secara dinamis (misalnya menampilkan daftar meja yang kosong).
+* **Alpine.js:** Library JavaScript ringan untuk menambahkan interaktivitas di sisi frontend (seperti dropdown filter, modal konfirmasi booking, atau tab navigasi) tanpa memberatkan performa aplikasi.
+
+**Real-time Fitur: Laravel Reverb**
+Mengirimkan update status ketersediaan meja biliard ke layar pengguna secara instan tanpa perlu memuat ulang (refresh) halaman.
+* Sebagai server WebSocket bawaan dari Laravel 11.
+* Ketika ada perubahan status (misal: Admin menerima booking on the spot, atau DP dari user baru saja masuk), Reverb akan menyiarkan (broadcast) event tersebut ke semua user yang sedang membuka halaman web, sehingga indikator status meja berubah seketika.
+
+**Payment Gateway: Midtrans (Sandbox)**
+Menangani proses pembayaran DP secara otomatis dan aman.
+* Menyediakan antarmuka pembayaran siap pakai (Snap) untuk berbagai metode bayar.
+* Mode sandbox digunakan untuk mensimulasikan pembayaran tanpa melibatkan uang sungguhan selama proses pengembangan.
+* Mengirimkan notifikasi (HTTP webhook) secara otomatis ke backend Laravel begitu pembayaran DP berhasil, agar status booking langsung terkonfirmasi tanpa campur tangan Admin.
+
+**Development Tools: Laragon & Ngrok**
+Memfasilitasi kelancaran dan kemudahan proses coding di komputermu (localhost).
+* **Laragon:** Sebagai local server (menggantikan XAMPP). Menyediakan PHP, MySQL, dan fitur Auto Virtual Hosts sehingga proyek ini bisa diakses dengan URL rapi seperti [http://cuereserve.test](http://cuereserve.test) di komputer ini.
+
+* **Ngrok:** Sebagai tunneling. Bertugas mempublikasikan URL cuereserve.test milik Laragon ke internet publik untuk sementara (misal menjadi [https://1234-abcd.ngrok-free.app](https://1234-abcd.ngrok-free.app)). Ini wajib digunakan agar server Midtrans bisa mengirimkan sinyal notifikasi pembayaran (Webhook) masuk ke komputer ini selama masa development.
 
 ---
 
