@@ -2,13 +2,18 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Models\BilliardTable;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
 Route::get('/dashboard', function () {
-    return view('dashboard');
+    // Ambil semua data meja dari database
+    $tables = BilliardTable::all(); 
+    
+    // Kirim data meja ke file dashboard.blade.php
+    return view('dashboard', compact('tables'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
