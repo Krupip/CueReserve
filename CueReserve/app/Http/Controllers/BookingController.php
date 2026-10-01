@@ -102,4 +102,36 @@ class BookingController extends Controller
         // 9. Arahkan ke halaman Checkout
         return view('booking.checkout', compact('booking', 'payment', 'snapToken'));
     }
+    
+    public function webhook(Request $request)
+    {
+        // 1. Ambil Server Key dari .env untuk gembok keamanan
+        $serverKey = env('MIDTRANS_SERVER_KEY');
+        
+        // 2. Buat rumus validasi (Signature Key)
+        $hashed = hash("sha512", $request->order_id . $request->status_code . $request->gross_amount . $serverKey);
+
+        // 3. Pastikan pesan ini benar-benar datang dari Midtrans (bukan penyusup)
+        if ($hashed == $request->signature_key) {
+            
+            $payment = Payment::where('midtrans_order_id', $request->order_id)->first();
+            
+            if ($payment) {
+                $transactionStatus = $request->transaction_status;
+                
+                // Jika status sukses (settlement/capture)
+                if ($transactionStatus == 'settlement' || $transactionStatus == 'capture') {
+                    $payment->update(['transaction_status' => 'paid']);
+                    $payment->booking->update(['status' => 'paid']);
+                } 
+                // Jika dibatalkan atau kadaluarsa
+                else if ($transactionStatus == 'cancel' || $transactionStatus == 'expire' || $transactionStatus == 'deny') {
+                    $payment->update(['transaction_status' => 'failed']);
+                    $payment->booking->update(['status' => 'cancelled']);
+                }
+            }
+        }
+
+        return response()->json(['message' => 'Webhook handled successfully']);
+    }
 }

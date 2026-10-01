@@ -28,3 +28,6 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// Route untuk Webhook Midtrans (Tanpa Middleware Auth)
+Route::post('/webhook/midtrans', [BookingController::class, 'webhook'])->name('midtrans.webhook');
