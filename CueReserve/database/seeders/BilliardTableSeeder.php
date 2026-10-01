@@ -11,11 +11,11 @@ class BilliardTableSeeder extends Seeder
     public function run(): void
     {
         $tables = [
-            ['table_number' => '01', 'type' => 'Standard Pool', 'price_per_hour' => 35000, 'is_active' => true],
-            ['table_number' => '02', 'type' => 'Standard Pool', 'price_per_hour' => 35000, 'is_active' => true],
-            ['table_number' => '03', 'type' => 'Standard Pool', 'price_per_hour' => 35000, 'is_active' => true],
-            ['table_number' => '04', 'type' => 'VIP Pool', 'price_per_hour' => 75000, 'is_active' => true],
-            ['table_number' => '05', 'type' => 'VIP Pool', 'price_per_hour' => 75000, 'is_active' => true],
+            ['table_number' => 'Meja 01', 'type' => 'Pool', 'price_per_hour' => 50000, 'is_active' => 1],
+            ['table_number' => 'Meja 02', 'type' => 'Pool', 'price_per_hour' => 50000, 'is_active' => 1],
+            ['table_number' => 'Meja 03', 'type' => 'Pool', 'price_per_hour' => 50000, 'is_active' => 1],
+            ['table_number' => 'Meja VIP', 'type' => 'Snooker', 'price_per_hour' => 75000, 'is_active' => 1],
+            ['table_number' => 'Meja VIP', 'type' => 'Pool', 'price_per_hour' => 50000, 'is_active' => 0], // Contoh maintenance
         ];
 
         foreach ($tables as $table) {
