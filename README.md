@@ -44,35 +44,126 @@ Pengelolaan operasional *billiard pool/lounge* umumnya masih mengandalkan sistem
 
 ---
 
-### Tech Stack yang Digunakan dan Fungsinya
-**Backend & Framework: Laravel 11(PHP)**
-Untuk mengelola proses registrasi dan otentikasi agar riwayat booking user tersimpan dengan aman; memproses permintaan booking, mengecek ketersediaan meja berdasarkan filter waktu dan jenis, serta mencegah terjadinya double booking; menyediakan panel untuk Admin agar bisa mencatat booking on the spot; memfasilitasi interaksi dengan database dan payment gateway.
+### Tech Stack & Specifications
+- **Frontend:** Laravel Blade + Tailwind CSS + Alpine.js
+- **Backend:** Laravel 11 (PHP)
+- **Database:** MySQL
+- **ORM:** Eloquent ORM
+- **Payment Gateway:** Midtrans (Snap.js & Notification Webhook)
+- **Local Tunneling:** Ngrok (for Webhook testing)
+- **Environment:** Use `.env.example` for database configuration and Midtrans API Keys (Merchant ID, Client Key, Server Key).
 
-**Database: MySQL**
-Menyimpan seluruh data secara terstruktur dengan sistem relasional yang kuat. Seperti menyimpan data user (profil, password yang dienkripsi); menyimpan data meja biliard (nomor meja, jenis meja, status saat ini); mencatat transaksi dan riwayat booking (waktu mulai, waktu selesai, total harga, status DP); memastikan konsistensi data, yang sangat krusial agar tidak ada dua orang yang memesan meja yang sama di waktu yang sama;
+### Main Entities
 
-**Frontend & UI: TALL Stack (Tailwind CSS, Alpine.js, Laravel Blade)**
-Membangun antarmuka (User Interface) yang interaktif, responsif, dan mudah digunakan oleh user maupun admin.
-* **Tailwind CSS:** Untuk styling dan membuat tampilan website dengan cepat. Membuat tampilan tetap rapi baik saat dibuka di laptop maupun smartphone.
-* **Laravel Blade:** Mesin template dari Laravel untuk merender data dari backend ke halaman HTML secara dinamis (misalnya menampilkan daftar meja yang kosong).
-* **Alpine.js:** Library JavaScript ringan untuk menambahkan interaktivitas di sisi frontend (seperti dropdown filter, modal konfirmasi booking, atau tab navigasi) tanpa memberatkan performa aplikasi.
+1. **User**
+   * Id
+   * Name
+   * Email
+   * Password
+   * Role (Admin/Student)
+   * CreatedAt
 
-**Real-time Fitur: Laravel Reverb**
-Mengirimkan update status ketersediaan meja biliard ke layar pengguna secara instan tanpa perlu memuat ulang (refresh) halaman.
-* Sebagai server WebSocket bawaan dari Laravel 11.
-* Ketika ada perubahan status (misal: Admin menerima booking on the spot, atau DP dari user baru saja masuk), Reverb akan menyiarkan (broadcast) event tersebut ke semua user yang sedang membuka halaman web, sehingga indikator status meja berubah seketika.
+2. **BilliardTable / Venue**
+   * Id
+   * Name
+   * Status (Available/Maintenance)
+   * PricePerHour
+   * CreatedAt
 
-**Payment Gateway: Midtrans (Sandbox)**
-Menangani proses pembayaran DP secara otomatis dan aman.
-* Menyediakan antarmuka pembayaran siap pakai (Snap) untuk berbagai metode bayar.
-* Mode sandbox digunakan untuk mensimulasikan pembayaran tanpa melibatkan uang sungguhan selama proses pengembangan.
-* Mengirimkan notifikasi (HTTP webhook) secara otomatis ke backend Laravel begitu pembayaran DP berhasil, agar status booking langsung terkonfirmasi tanpa campur tangan Admin.
+3. **Booking**
+   * Id
+   * UserId
+   * TableId
+   * StartTime
+   * EndTime
+   * TotalPrice
+   * DownPayment (30%)
+   * Status (`pending`, `paid`, `cancelled`)
+   * CreatedAt
 
-**Development Tools: Laragon & Ngrok**
-Memfasilitasi kelancaran dan kemudahan proses coding di komputermu (localhost).
-* **Laragon:** Sebagai local server (menggantikan XAMPP). Menyediakan PHP, MySQL, dan fitur Auto Virtual Hosts sehingga proyek ini bisa diakses dengan URL rapi seperti [http://cuereserve.test](http://cuereserve.test) di komputer ini.
+4. **Payment**
+   * Id
+   * BookingId
+   * MidtransOrderId
+   * GrossAmount
+   * PaymentType
+   * TransactionStatus (`pending`, `settlement`, `expire`, `cancel`)
+   * CreatedAt
+   * UpdatedAt
 
-* **Ngrok:** Sebagai tunneling. Bertugas mempublikasikan URL cuereserve.test milik Laragon ke internet publik untuk sementara (misal menjadi [https://1234-abcd.ngrok-free.app](https://1234-abcd.ngrok-free.app)). Ini wajib digunakan agar server Midtrans bisa mengirimkan sinyal notifikasi pembayaran (Webhook) masuk ke komputer ini selama masa development.
+### Backend Features
+
+1. **CRUD Venues & Equipment**
+   * Create, list, detail, update, delete sports venues/tables (Admin only).
+
+2. **Smart Booking System**
+   * Validate booking schedule (Operational hours: 08:00 - 23:00).
+   * Prevent overlapping schedules for the same table.
+   * Allow sequential (estafet) bookings without time gaps.
+   * Automatically calculate total price based on duration.
+   * Automatically calculate 30% Down Payment (DP).
+
+3. **Midtrans Payment Integration**
+   * Generate Snap Token for seamless frontend checkout pop-up.
+   * Generate unique `OrderId` for every transaction.
+
+4. **Automated Webhook Synchronization**
+   * Endpoint to receive HTTP notifications from Midtrans.
+   * Secure the endpoint by disabling CSRF specifically for `/webhook/midtrans`.
+   * Validate incoming requests using `Signature Key` (SHA-512 hash of OrderId, StatusCode, GrossAmount, and ServerKey).
+   * Automatically update `transaction_status` in the `payments` table.
+   * Automatically sync and update the `status` in the `bookings` table (`pending` -> `paid` or `cancelled`).
+
+### Frontend Pages
+
+1. **Home / Venue Dashboard**
+   * List of available billiard tables and sports equipment.
+   * Show pricing and basic information.
+
+2. **Booking Page**
+   * Form to select date, start time, and end time.
+   * Real-time calculation display for Total Price and 30% DP.
+   * Show error messages if the schedule is already booked or invalid.
+
+3. **Checkout & Payment**
+   * Order summary details.
+   * Button `Bayar Sekarang` triggering Midtrans Snap pop-up.
+   * Auto-redirect to the user dashboard upon successful payment simulation.
+
+4. **User Dashboard / Transaction History**
+   * Table showing user's booking history.
+   * Show current payment status (Pending, Paid, Cancelled).
+
+### Required API & Web Routes
+
+- `GET /` (Landing Page)
+- `GET /dashboard` (User Dashboard)
+- `GET /bookings/create` (Show Booking Form)
+- `POST /bookings` (Store Booking & Generate Invoice)
+- `GET /checkout/{Id}` (Checkout Page)
+- `POST /webhook/midtrans` (Midtrans Notification Handler)
+
+### Project Structure
+
+- Built as a monolithic Laravel application.
+- Structure:
+
+```text
+CueReserve/
+  app/
+    Http/
+      Controllers/ (BookingController, etc.)
+    Models/ (Booking, Payment, BilliardTable, User)
+  bootstrap/
+    app.php (CSRF exclusions)
+  config/
+    midtrans.php
+  database/
+    migrations/
+  resources/
+    views/ (Blade templates)
+  routes/
+    web.php (Application & Webhook routes)
 
 ---
 
