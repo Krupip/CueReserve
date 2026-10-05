@@ -54,17 +54,27 @@ class AdminBilliardTableController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
+    // Menampilkan form edit yang sudah terisi data lama
     public function edit(string $id)
     {
-        //
+        $table = \App\Models\BilliardTable::findOrFail($id);
+        return view('admin.tables.edit', compact('table'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
+    // Menyimpan perubahan data ke database
     public function update(Request $request, string $id)
     {
-        //
+        $request->validate([
+            'table_number' => 'required|string|max:255',
+            'type' => 'required|string|max:255',
+            'price_per_hour' => 'required|integer|min:0',
+            'is_active' => 'required|boolean',
+        ]);
+
+        $table = \App\Models\BilliardTable::findOrFail($id);
+        $table->update($request->all());
+
+        return redirect()->route('tables.index')->with('success', 'Data meja berhasil diperbarui!');
     }
 
     /**
