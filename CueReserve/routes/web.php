@@ -7,20 +7,26 @@ use App\Models\BilliardTable;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\AdminController;
 use App\Http\Middleware\IsAdmin;
+use App\Http\Controllers\HomeController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Rute Beranda
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/dashboard', function () {
     // Ambil semua data meja dari database
-    $tables = BilliardTable::all(); 
-    
+    $tables = BilliardTable::all();
+
     // Kirim data meja ke file dashboard.blade.php
     return view('dashboard', compact('tables'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    // Rute untuk menampilkan form booking, dengan membawa ID meja yang dipilih
+    Route::get('/booking/{billiardTable}', [BookingController::class, 'create'])->name('bookings.create');
+
+    // Rute untuk memproses form booking (nanti kita buat fungsinya)
+    Route::post('/booking', [BookingController::class, 'store'])->name('bookings.store');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -33,11 +39,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
     Route::resource('/admin/tables', AdminBilliardTableController::class);
     Route::get('/admin/dashboard', [AdminController::class, 'index'])
-    ->middleware(['auth', IsAdmin::class])
-    ->name('admin.dashboard');
+        ->middleware(['auth', IsAdmin::class])
+        ->name('admin.dashboard');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
 
 // Route untuk Webhook Midtrans (Tanpa Middleware Auth)
 Route::post('/webhook/midtrans', [BookingController::class, 'webhook'])->name('midtrans.webhook');

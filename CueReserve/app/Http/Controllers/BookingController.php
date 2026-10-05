@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\BilliardTable;
-use App\Models\Booking; 
+use App\Models\Booking;
 use Carbon\Carbon;
 use App\Models\Payment;
 use Midtrans\Config;
@@ -12,9 +12,15 @@ use Midtrans\Snap;
 
 class BookingController extends Controller
 {
-    public function create(BilliardTable $table)
+    // Menampilkan form booking untuk meja tertentu
+    public function create(BilliardTable $billiardTable)
     {
-        return view('booking.create', compact('table'));
+        // Pastikan meja yang diakses benar-benar sedang aktif
+        if (!$billiardTable->is_active) {
+            return redirect('/')->with('error', 'Maaf, meja ini sedang maintenance.');
+        }
+
+        return view('booking.create', compact('billiardTable'));
     }
 
     public function store(Request $request, BilliardTable $table)
@@ -40,7 +46,7 @@ class BookingController extends Controller
             ->where(function ($query) use ($start, $end) {
                 // Logika Estafet: Izinkan booking jika jam mulai = jam selesai orang lain
                 $query->where('start_time', '<', $end)
-                      ->where('end_time', '>', $start);
+                    ->where('end_time', '>', $start);
             })->exists();
 
         if ($isConflict) {
@@ -50,9 +56,9 @@ class BookingController extends Controller
         // 3. Hitung Durasi dan Harga (Dihitung per menit agar presisi misal 1.5 jam)
         $durationHours = $start->diffInMinutes($end) / 60;
         $totalPrice = $durationHours * $table->price_per_hour;
-        
+
         // Asumsi aturan bisnis CueReserve: DP dibayar 30% dari total
-        $dpAmount = $totalPrice * 0.3; 
+        $dpAmount = $totalPrice * 0.3;
 
         // 4. Simpan ke database
         $booking = Booking::create([
@@ -102,28 +108,28 @@ class BookingController extends Controller
         // 9. Arahkan ke halaman Checkout
         return view('booking.checkout', compact('booking', 'payment', 'snapToken'));
     }
-    
+
     public function webhook(Request $request)
     {
         // 1. Ambil Server Key dari .env untuk gembok keamanan
         $serverKey = env('MIDTRANS_SERVER_KEY');
-        
+
         // 2. Buat rumus validasi (Signature Key)
         $hashed = hash("sha512", $request->order_id . $request->status_code . $request->gross_amount . $serverKey);
 
         // 3. Pastikan pesan ini benar-benar datang dari Midtrans (bukan penyusup)
         if ($hashed == $request->signature_key) {
-            
+
             $payment = Payment::where('midtrans_order_id', $request->order_id)->first();
-            
+
             if ($payment) {
                 $transactionStatus = $request->transaction_status;
-                
+
                 // Jika status sukses (settlement/capture)
                 if ($transactionStatus == 'settlement' || $transactionStatus == 'capture') {
                     $payment->update(['transaction_status' => 'paid']);
                     $payment->booking->update(['status' => 'paid']);
-                } 
+                }
                 // Jika dibatalkan atau kadaluarsa
                 else if ($transactionStatus == 'cancel' || $transactionStatus == 'expire' || $transactionStatus == 'deny') {
                     $payment->update(['transaction_status' => 'failed']);

@@ -1,85 +1,185 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Pesan Meja') }} {{ $table->table_number }}
-        </h2>
-    </x-slot>
+<!DOCTYPE html>
+<html lang="en">
 
-    <div class="py-12">
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
-                <div class="p-6">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking {{ $billiardTable->table_number }} - CueReserve</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js untuk perhitungan harga real-time -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
 
-                    <!-- Informasi Meja -->
-                    <div class="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-100 flex justify-between items-center">
-                        <div>
-                            <h3 class="text-xl font-extrabold text-gray-900">Meja {{ $table->table_number }}</h3>
-                            <p class="text-sm text-gray-500 uppercase tracking-wide mt-1">{{ $table->type }}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-sm text-gray-500">Tarif per jam</p>
-                            <p class="text-xl font-bold text-emerald-600">Rp {{ number_format($table->price_per_hour, 0, ',', '.') }}</p>
-                        </div>
-                    </div>
+<body class="bg-gray-50 text-gray-900 font-sans antialiased">
 
-                    <!-- Menampilkan Pesan Error (jika validasi waktu salah nantinya) -->
-                    @if ($errors->any())
-                    <div class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
-                        <ul class="list-disc list-inside text-sm">
-                            @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                    @endif
-
-                    <!-- Form Input Waktu -->
-                    <form method="POST" action="{{ route('book.store', $table->id) }}">
-                        @csrf
-
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                            <!-- Input Tanggal -->
-                            <div>
-                                <label for="booking_date" class="block text-sm font-medium text-gray-700 mb-1">Tanggal Main</label>
-                                <input type="date" name="booking_date" id="booking_date" min="{{ date('Y-m-d') }}"
-                                    class="w-full border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 rounded-md shadow-sm" required>
-                            </div>
-
-                            <!-- Input Waktu Mulai -->
-                            <div>
-                                <label for="start_time" class="block text-sm font-medium text-gray-700 mb-1">Jam Mulai</label>
-                                <select name="start_time" id="start_time" class="w-full border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 rounded-md shadow-sm" required>
-                                    <option value="" disabled selected>Pilih Jam Mulai</option>
-                                    @for ($i = 8; $i <= 23; $i++)
-                                        @php $time=sprintf('%02d:00', $i); @endphp
-                                        <option value="{{ $time }}">{{ $time }}</option>
-                                        @endfor
-                                </select>
-                            </div>
-
-                            <!-- Input Waktu Selesai -->
-                            <div>
-                                <label for="end_time" class="block text-sm font-medium text-gray-700 mb-1">Jam Selesai</label>
-                                <select name="end_time" id="end_time" class="w-full border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 rounded-md shadow-sm" required>
-                                    <option value="" disabled selected>Pilih Jam Selesai</option>
-                                    @for ($i = 8; $i <= 23; $i++)
-                                        @php $time=sprintf('%02d:00', $i); @endphp
-                                        <option value="{{ $time }}">{{ $time }}</option>
-                                        @endfor
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-end mt-8 border-t border-gray-100 pt-6">
-                            <a href="{{ route('dashboard') }}" class="text-gray-500 hover:text-gray-900 font-medium mr-6 transition">Batal</a>
-                            <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-6 rounded-lg transition duration-150">
-                                Konfirmasi & Bayar DP
-                            </button>
-                        </div>
-                    </form>
-
-                </div>
+    <!-- Navbar Sederhana -->
+    <nav class="bg-white shadow mb-8">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <a href="{{ route('home') }}" class="font-bold text-2xl text-blue-600">CueReserve</a>
+                <a href="{{ route('home') }}" class="text-gray-600 hover:text-blue-600 font-medium">&larr; Kembali ke Katalog</a>
             </div>
         </div>
+    </nav>
+
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+
+        <!-- Kartu Info Meja -->
+        <div class="bg-blue-600 rounded-t-xl p-6 text-white">
+            <h1 class="text-2xl font-bold mb-1">Booking {{ $billiardTable->table_number }}</h1>
+            <p class="text-blue-100">{{ $billiardTable->type }} Table &bull; Rp {{ number_format($billiardTable->price_per_hour, 0, ',', '.') }}/jam</p>
+        </div>
+
+        <!-- Form Booking dengan Alpine.js -->
+        <div class="bg-white shadow-md rounded-b-xl p-6 border border-t-0 border-gray-200"
+            x-data="bookingCalculator({{ $billiardTable->price_per_hour }})">
+
+            <form action="{{ route('bookings.store') }}" method="POST">
+                @csrf
+                <!-- Kirim ID Meja secara sembunyi -->
+                <input type="hidden" name="table_id" value="{{ $billiardTable->id }}">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Tanggal Main -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="booking_date">Tanggal Main</label>
+                        <input type="date" name="booking_date" id="booking_date" required min="{{ date('Y-m-d') }}"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring focus:border-blue-300">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <!-- Jam Mulai -->
+                    <div x-data="{ openStart: false }">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Jam Mulai (Buka 08:00)</label>
+                        <div class="relative">
+                            <!-- Tombol Select -->
+                            <button type="button" @click="openStart = !openStart" @click.outside="openStart = false"
+                                class="shadow border rounded w-full py-2 px-3 text-left text-gray-700 leading-tight focus:outline-none focus:ring focus:border-blue-300 bg-white flex justify-between items-center">
+                                <span x-text="startTime ? startTime : '-- Pilih Jam Mulai --'"></span>
+                                <!-- Icon panah bawah -->
+                                <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <!-- List Dropdown dengan batasan tinggi (Scrollable) -->
+                            <ul x-show="openStart" style="display: none;"
+                                class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto py-1 text-sm">
+                                @for ($i = 8; $i <= 22; $i++)
+                                    <li @click="startTime = '{{ sprintf('%02d:00', $i) }}'; openStart = false"
+                                    class="cursor-pointer select-none relative py-2 px-3 hover:bg-blue-600 hover:text-white"
+                                    :class="startTime === '{{ sprintf('%02d:00', $i) }}' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-900'">
+                                    {{ sprintf('%02d:00', $i) }}
+                                    </li>
+                                    @endfor
+                            </ul>
+                        </div>
+                        <!-- Input tersembunyi untuk dikirim ke Controller -->
+                        <input type="hidden" name="start_time" x-model="startTime">
+                    </div>
+
+                    <!-- Jam Selesai -->
+                    <div x-data="{ openEnd: false }">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Jam Selesai (Tutup 23:00)</label>
+                        <div class="relative">
+                            <!-- Tombol Select -->
+                            <button type="button" @click="openEnd = !openEnd" @click.outside="openEnd = false"
+                                class="shadow border rounded w-full py-2 px-3 text-left text-gray-700 leading-tight focus:outline-none focus:ring focus:border-blue-300 bg-white flex justify-between items-center">
+                                <span x-text="endTime ? endTime : '-- Pilih Jam Selesai --'"></span>
+                                <!-- Icon panah bawah -->
+                                <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <!-- List Dropdown dengan batasan tinggi (Scrollable) -->
+                            <ul x-show="openEnd" style="display: none;"
+                                class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto py-1 text-sm">
+                                @for ($i = 9; $i <= 23; $i++)
+                                    <li @click="endTime = '{{ sprintf('%02d:00', $i) }}'; openEnd = false"
+                                    class="cursor-pointer select-none relative py-2 px-3 hover:bg-blue-600 hover:text-white"
+                                    :class="endTime === '{{ sprintf('%02d:00', $i) }}' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-900'">
+                                    {{ sprintf('%02d:00', $i) }}
+                                    </li>
+                                    @endfor
+                            </ul>
+                        </div>
+                        <!-- Input tersembunyi untuk dikirim ke Controller -->
+                        <input type="hidden" name="end_time" x-model="endTime">
+                    </div>
+                </div>
+
+                <!-- Ringkasan Pembayaran (Muncul Otomatis jika jam valid) -->
+                <div x-show="isValidTime" class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                    <h3 class="font-bold text-gray-700 mb-2 border-b pb-2">Ringkasan Pembayaran</h3>
+                    <div class="flex justify-between mb-1 text-sm text-gray-600">
+                        <span>Durasi Bermain:</span>
+                        <span x-text="hours + ' Jam'" class="font-medium"></span>
+                    </div>
+                    <div class="flex justify-between mb-1 text-sm text-gray-600">
+                        <span>Total Harga:</span>
+                        <span x-text="formatRupiah(totalPrice)" class="font-medium"></span>
+                    </div>
+                    <div class="flex justify-between mt-2 pt-2 border-t font-bold text-blue-600 text-lg">
+                        <span>DP yang harus dibayar (30%):</span>
+                        <span x-text="formatRupiah(dp)"></span>
+                    </div>
+                </div>
+
+                <!-- Peringatan jika jam salah -->
+                <div x-show="!isValidTime && startTime && endTime" class="bg-red-50 text-red-600 p-3 rounded-md mb-6 text-sm">
+                    Jam selesai harus lebih besar dari jam mulai.
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" :disabled="!isValidTime"
+                        class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold py-3 px-8 rounded-lg shadow transition duration-200">
+                        Lanjut ke Pembayaran
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
-</x-app-layout>
+
+    <!-- Script Logika Alpine.js -->
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('bookingCalculator', (price) => ({
+                pricePerHour: price,
+                startTime: '',
+                endTime: '',
+
+                get hours() {
+                    if (!this.startTime || !this.endTime) return 0;
+                    let start = new Date(`2000-01-01T${this.startTime}`);
+                    let end = new Date(`2000-01-01T${this.endTime}`);
+                    let diff = (end - start) / 3600000; // Konversi ms ke jam
+                    return diff;
+                },
+
+                get isValidTime() {
+                    return this.hours > 0;
+                },
+
+                get totalPrice() {
+                    return this.hours * this.pricePerHour;
+                },
+
+                get dp() {
+                    return this.totalPrice * 0.3;
+                },
+
+                formatRupiah(number) {
+                    return new Intl.NumberFormat('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                        minimumFractionDigits: 0
+                    }).format(number);
+                }
+            }))
+        })
+    </script>
+</body>
+
+</html>
