@@ -13,11 +13,13 @@ use App\Http\Controllers\HomeController;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/dashboard', function () {
-    // Ambil semua data meja dari database
-    $tables = BilliardTable::all();
-
-    // Kirim data meja ke file dashboard.blade.php
-    return view('dashboard', compact('tables'));
+    // Ambil data booking milik user yang sedang login, urutkan dari yang terbaru
+    $bookings = \App\Models\Booking::with('billiardTable')
+        ->where('user_id', auth()->id())
+        ->orderBy('created_at', 'desc')
+        ->get();
+        
+    return view('dashboard', compact('bookings'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
