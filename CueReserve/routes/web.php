@@ -10,17 +10,17 @@ use App\Http\Middleware\IsAdmin;
 use App\Http\Controllers\HomeController;
 
 // Rute Beranda
-Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('dashboard');
 
-Route::get('/dashboard', function () {
-    // Ambil data booking milik user yang sedang login, urutkan dari yang terbaru
+// Rute Riwayat Booking User
+Route::get('/booking-history', function () {
     $bookings = \App\Models\Booking::with('billiardTable')
         ->where('user_id', auth()->id())
         ->orderBy('created_at', 'desc')
         ->get();
         
-    return view('dashboard', compact('bookings'));
-})->middleware(['auth', 'verified'])->name('dashboard');
+    return view('booking_history', compact('bookings'));
+})->middleware(['auth', 'verified'])->name('booking.history');
 
 Route::middleware('auth')->group(function () {
     // Rute untuk menampilkan form booking, dengan membawa ID meja yang dipilih

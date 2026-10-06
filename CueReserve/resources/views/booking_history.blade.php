@@ -1,8 +1,13 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Riwayat Booking Saya') }}
-        </h2>
+        <div class="flex justify-between items-center">
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                {{ __('Riwayat Booking Saya') }}
+            </h2>
+            <a href="{{ route('dashboard') }}" class="text-blue-600 hover:text-blue-800 font-medium transition">
+                &larr; Kembali ke Beranda
+            </a>
+        </div>
     </x-slot>
 
     <div class="py-12">
@@ -58,7 +63,7 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
                                             <p class="text-gray-500 text-lg">Kamu belum memiliki riwayat booking.</p>
-                                            <a href="{{ route('home') }}" class="mt-4 inline-block text-blue-600 font-medium hover:underline">Mulai Booking Meja &rarr;</a>
+                                            <a href="{{ route('dashboard') }}" class="mt-4 inline-block text-blue-600 font-medium hover:underline">Mulai Booking Meja &rarr;</a>
                                         </td>
                                     </tr>
                                 @endforelse

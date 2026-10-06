@@ -16,8 +16,8 @@
     <nav class="bg-white shadow mb-8">
         <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
-                <a href="{{ route('home') }}" class="font-bold text-2xl text-blue-600">CueReserve</a>
-                <a href="{{ route('home') }}" class="text-gray-600 hover:text-blue-600 font-medium">&larr; Kembali ke Katalog</a>
+                <a href="{{ route('dashboard') }}" class="font-bold text-2xl text-blue-600">CueReserve</a>
+                <a href="{{ route('dashboard') }}" class="text-gray-600 hover:text-blue-600 font-medium">&larr; Kembali ke Katalog</a>
             </div>
         </div>
     </nav>
@@ -43,7 +43,7 @@
                     <!-- Tanggal Main -->
                     <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2" for="booking_date">Tanggal Main</label>
-                        <input type="date" name="booking_date" id="booking_date" required min="{{ date('Y-m-d') }}"
+                        <input type="date" name="booking_date" id="booking_date" required min="{{ date('Y-m-d') }}" x-model="selectedDate"
                             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring focus:border-blue-300">
                     </div>
                 </div>
@@ -51,61 +51,51 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <!-- Jam Mulai -->
                     <div x-data="{ openStart: false }">
-                        <label class="block text-gray-700 text-sm font-bold mb-2">Jam Mulai (Buka 08:00)</label>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Jam Mulai</label>
                         <div class="relative">
-                            <!-- Tombol Select -->
                             <button type="button" @click="openStart = !openStart" @click.outside="openStart = false"
-                                class="shadow border rounded w-full py-2 px-3 text-left text-gray-700 leading-tight focus:outline-none focus:ring focus:border-blue-300 bg-white flex justify-between items-center">
+                                class="shadow border rounded w-full py-2 px-3 text-left text-gray-700 bg-white flex justify-between items-center">
                                 <span x-text="startTime ? startTime : '-- Pilih Jam Mulai --'"></span>
-                                <!-- Icon panah bawah -->
                                 <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                 </svg>
                             </button>
-
-                            <!-- List Dropdown dengan batasan tinggi (Scrollable) -->
-                            <ul x-show="openStart" style="display: none;"
-                                class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto py-1 text-sm">
-                                @for ($i = 8; $i <= 22; $i++)
-                                    <li @click="startTime = '{{ sprintf('%02d:00', $i) }}'; openStart = false"
-                                    class="cursor-pointer select-none relative py-2 px-3 hover:bg-blue-600 hover:text-white"
-                                    :class="startTime === '{{ sprintf('%02d:00', $i) }}' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-900'">
-                                    {{ sprintf('%02d:00', $i) }}
+                            <ul x-show="openStart" style="display: none;" class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto py-1 text-sm">
+                                <template x-for="hour in availableStartHours" :key="hour">
+                                    <!-- Jika jam mulai diubah, jam selesai otomatis di-reset agar tidak error -->
+                                    <li @click="startTime = hour; openStart = false; endTime = ''"
+                                        class="cursor-pointer select-none relative py-2 px-3 hover:bg-blue-600 hover:text-white"
+                                        :class="startTime === hour ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-900'"
+                                        x-text="hour">
                                     </li>
-                                    @endfor
+                                </template>
+                                <li x-show="availableStartHours.length === 0" class="py-2 px-3 text-gray-500 italic text-center">Meja tutup / Waktu habis</li>
                             </ul>
                         </div>
-                        <!-- Input tersembunyi untuk dikirim ke Controller -->
                         <input type="hidden" name="start_time" x-model="startTime">
                     </div>
 
                     <!-- Jam Selesai -->
                     <div x-data="{ openEnd: false }">
-                        <label class="block text-gray-700 text-sm font-bold mb-2">Jam Selesai (Tutup 23:00)</label>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Jam Selesai</label>
                         <div class="relative">
-                            <!-- Tombol Select -->
-                            <button type="button" @click="openEnd = !openEnd" @click.outside="openEnd = false"
-                                class="shadow border rounded w-full py-2 px-3 text-left text-gray-700 leading-tight focus:outline-none focus:ring focus:border-blue-300 bg-white flex justify-between items-center">
-                                <span x-text="endTime ? endTime : '-- Pilih Jam Selesai --'"></span>
-                                <!-- Icon panah bawah -->
+                            <button type="button" @click="openEnd = !openEnd" @click.outside="openEnd = false" :disabled="!startTime"
+                                class="shadow border rounded w-full py-2 px-3 text-left text-gray-700 bg-white flex justify-between items-center disabled:bg-gray-100 disabled:cursor-not-allowed">
+                                <span x-text="endTime ? endTime : (startTime ? '-- Pilih Jam Selesai --' : 'Pilih Jam Mulai Dulu')"></span>
                                 <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                 </svg>
                             </button>
-
-                            <!-- List Dropdown dengan batasan tinggi (Scrollable) -->
-                            <ul x-show="openEnd" style="display: none;"
-                                class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto py-1 text-sm">
-                                @for ($i = 9; $i <= 23; $i++)
-                                    <li @click="endTime = '{{ sprintf('%02d:00', $i) }}'; openEnd = false"
-                                    class="cursor-pointer select-none relative py-2 px-3 hover:bg-blue-600 hover:text-white"
-                                    :class="endTime === '{{ sprintf('%02d:00', $i) }}' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-900'">
-                                    {{ sprintf('%02d:00', $i) }}
+                            <ul x-show="openEnd && startTime" style="display: none;" class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto py-1 text-sm">
+                                <template x-for="hour in availableEndHours" :key="hour">
+                                    <li @click="endTime = hour; openEnd = false"
+                                        class="cursor-pointer select-none relative py-2 px-3 hover:bg-blue-600 hover:text-white"
+                                        :class="endTime === hour ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-900'"
+                                        x-text="hour">
                                     </li>
-                                    @endfor
+                                </template>
                             </ul>
                         </div>
-                        <!-- Input tersembunyi untuk dikirim ke Controller -->
                         <input type="hidden" name="end_time" x-model="endTime">
                     </div>
                 </div>
@@ -147,29 +137,53 @@
         document.addEventListener('alpine:init', () => {
             Alpine.data('bookingCalculator', (price) => ({
                 pricePerHour: price,
+                selectedDate: '{{ date('Y - m - d ') }}', // Default hari ini
+                serverToday: '{{ date('Y - m - d ') }}',
+                serverHour: {{date('H')}}, // Ambil jam server saat ini
                 startTime: '',
                 endTime: '',
+
+                // Menghasilkan jam mulai yang valid
+                get availableStartHours() {
+                    let hours = [];
+                    let isToday = this.selectedDate === this.serverToday;
+
+                    for (let i = 8; i <= 22; i++) {
+                        // Jika hari ini, buang jam yang lebih kecil atau sama dengan jam sekarang
+                        if (isToday && i <= this.serverHour) continue;
+                        hours.push(i.toString().padStart(2, '0') + ':00');
+                    }
+                    return hours;
+                },
+
+                // Menghasilkan jam selesai (selalu di atas jam mulai)
+                get availableEndHours() {
+                    let hours = [];
+                    if (!this.startTime) return hours;
+
+                    let start = parseInt(this.startTime.split(':')[0]);
+                    for (let i = start + 1; i <= 23; i++) {
+                        hours.push(i.toString().padStart(2, '0') + ':00');
+                    }
+                    return hours;
+                },
 
                 get hours() {
                     if (!this.startTime || !this.endTime) return 0;
                     let start = new Date(`2000-01-01T${this.startTime}`);
                     let end = new Date(`2000-01-01T${this.endTime}`);
-                    let diff = (end - start) / 3600000; // Konversi ms ke jam
-                    return diff;
+                    return (end - start) / 3600000;
                 },
 
                 get isValidTime() {
                     return this.hours > 0;
                 },
-
                 get totalPrice() {
                     return this.hours * this.pricePerHour;
                 },
-
                 get dp() {
                     return this.totalPrice * 0.3;
                 },
-
                 formatRupiah(number) {
                     return new Intl.NumberFormat('id-ID', {
                         style: 'currency',

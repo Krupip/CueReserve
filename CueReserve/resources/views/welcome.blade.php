@@ -20,7 +20,7 @@
                         @if(Auth::user()->role === 'admin')
                             <a href="{{ route('admin.dashboard') }}" class="text-gray-600 hover:text-blue-600 font-medium">Panel Admin</a>
                         @else
-                            <a href="#" class="text-gray-600 hover:text-blue-600 font-medium">Riwayat Booking</a>
+                            <a href="{{ route('booking.history') }}" class="text-gray-600 hover:text-blue-600 font-medium">Riwayat Booking</a>
                         @endif
                         
                         <form method="POST" action="{{ route('logout') }}" class="inline">

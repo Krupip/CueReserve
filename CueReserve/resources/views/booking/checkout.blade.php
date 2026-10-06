@@ -47,8 +47,8 @@
             // Memanggil pop-up Snap menggunakan token dari Controller
             snap.pay('{{ $snapToken }}', {
                 onSuccess: function(result){
-                    // Arahkan ke dashboard jika sukses
-                    window.location.href = "{{ route('dashboard') }}";
+                    // Arahkan ke booking history jika sukses
+                    window.location.href = "{{ route('booking.history') }}";
                 },
                 onPending: function(result){
                     // Bisa diarahkan ke halaman "Menunggu Pembayaran" jika punya, 
