@@ -23,45 +23,45 @@ class BookingController extends Controller
         return view('booking.create', compact('billiardTable'));
     }
 
-    public function store(Request $request, BilliardTable $table)
+    public function store(Request $request)
     {
-        // 1. Validasi Input Terpisah (Hanya terima jam bulat)
+        // 1. Validasi Input
         $request->validate([
+            'table_id' => 'required|exists:billiard_tables,id',
             'booking_date' => 'required|date|after_or_equal:today',
             'start_time' => 'required|date_format:H:00',
             'end_time' => 'required|date_format:H:00|after:start_time',
         ], [
-            // Pesan error kustom jika formatnya salah
             'start_time.date_format' => 'Jam mulai harus berupa jam bulat (contoh: 13:00).',
             'end_time.date_format' => 'Jam selesai harus berupa jam bulat (contoh: 15:00).',
         ]);
+
+        $table = \App\Models\BilliardTable::findOrFail($request->table_id);
 
         // Gabungkan tanggal dan jam menjadi format DateTime utuh
         $start = Carbon::parse($request->booking_date . ' ' . $request->start_time);
         $end = Carbon::parse($request->booking_date . ' ' . $request->end_time);
 
-        // 2. Cek Jadwal Bentrok (Mencegah Double Booking)
-        $isConflict = Booking::where('billiard_table_id', $table->id)
+        // 2. Cek Jadwal Bentrok (Mencegah Double Booking / Overlapping)
+        $isConflict = \App\Models\Booking::where('billiard_table_id', $table->id)
             ->whereIn('status', ['pending', 'paid'])
             ->where(function ($query) use ($start, $end) {
                 // Logika Estafet: Izinkan booking jika jam mulai = jam selesai orang lain
                 $query->where('start_time', '<', $end)
-                    ->where('end_time', '>', $start);
+                      ->where('end_time', '>', $start);
             })->exists();
 
         if ($isConflict) {
-            return back()->withErrors(['Jadwal ini sudah dipesan orang lain. Silakan pilih jam lain.'])->withInput();
+            return back()->with('error', 'Maaf, jadwal ini sudah dipesan. Silakan pilih jam lain.')->withInput();
         }
 
-        // 3. Hitung Durasi dan Harga (Dihitung per menit agar presisi misal 1.5 jam)
+        // 3. Hitung Durasi, Harga, dan DP 30%
         $durationHours = $start->diffInMinutes($end) / 60;
-        $totalPrice = $durationHours * $table->price_per_hour;
+        $totalPrice = $durationHours * $table->price_per_hour; // <-- Simbol kali (*) ditambahkan
+        $dpAmount = $totalPrice * 0.3; // <-- Simbol kali (*) ditambahkan
 
-        // Asumsi aturan bisnis CueReserve: DP dibayar 30% dari total
-        $dpAmount = $totalPrice * 0.3;
-
-        // 4. Simpan ke database
-        $booking = Booking::create([
+        // 4. Simpan ke database (Tabel Bookings)
+        $booking = \App\Models\Booking::create([
             'user_id' => auth()->id(),
             'billiard_table_id' => $table->id,
             'start_time' => $start,
@@ -71,19 +71,17 @@ class BookingController extends Controller
             'status' => 'pending',
         ]);
 
-        // ... (kode insert ke tabel Booking sebelumnya tetap ada di atas ini)
-
         // 5. Konfigurasi Midtrans
-        Config::$serverKey = env('MIDTRANS_SERVER_KEY');
-        Config::$isProduction = env('MIDTRANS_IS_PRODUCTION', false);
-        Config::$isSanitized = env('MIDTRANS_IS_SANITIZED', true);
-        Config::$is3ds = env('MIDTRANS_IS_3DS', true);
+        \Midtrans\Config::$serverKey = env('MIDTRANS_SERVER_KEY');
+        \Midtrans\Config::$isProduction = env('MIDTRANS_IS_PRODUCTION', false);
+        \Midtrans\Config::$isSanitized = env('MIDTRANS_IS_SANITIZED', true);
+        \Midtrans\Config::$is3ds = env('MIDTRANS_IS_3DS', true);
 
         // Membuat ID Order unik (Contoh: DP-1-1700000000)
         $orderId = 'DP-' . $booking->id . '-' . time();
 
-        // 6. Simpan data ke tabel payments
-        $payment = Payment::create([
+        // 6. Simpan data ke tabel Payments
+        $payment = \App\Models\Payment::create([
             'booking_id' => $booking->id,
             'midtrans_order_id' => $orderId,
             'gross_amount' => $dpAmount,
@@ -103,9 +101,9 @@ class BookingController extends Controller
         ];
 
         // 8. Dapatkan Snap Token dari Midtrans
-        $snapToken = Snap::getSnapToken($params);
+        $snapToken = \Midtrans\Snap::getSnapToken($params);
 
-        // 9. Arahkan ke halaman Checkout
+        // 9. Arahkan ke halaman Checkout (Pastikan nama foldernya 'bookings' pakai s)
         return view('booking.checkout', compact('booking', 'payment', 'snapToken'));
     }
 
