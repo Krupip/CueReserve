@@ -7,6 +7,7 @@ use App\Models\BilliardTable;
 use App\Models\Booking;
 use Carbon\Carbon;
 use App\Models\Payment;
+use App\Models\Setting;
 use Midtrans\Config;
 use Midtrans\Snap;
 
@@ -31,7 +32,8 @@ class BookingController extends Controller
             return redirect('/')->with('error', 'Maaf, meja ini sedang maintenance.');
         }
 
-        return view('booking.create', compact('billiardTable'));
+        $dpPercentage = (int) Setting::get('dp_percentage', 30);
+        return view('booking.create', compact('billiardTable', 'dpPercentage'));
     }
 
     public function store(Request $request)
@@ -66,10 +68,11 @@ class BookingController extends Controller
             return back()->with('error', 'Maaf, jadwal ini sudah dipesan. Silakan pilih jam lain.')->withInput();
         }
 
-        // 3. Hitung Durasi, Harga, dan DP 30%
+        // 3. Hitung Durasi, Harga, dan DP sesuai setting
+        $dpPercentage = (int) Setting::get('dp_percentage', 30);
         $durationHours = $start->diffInMinutes($end) / 60;
-        $totalPrice = $durationHours * $table->price_per_hour; // <-- Simbol kali (*) ditambahkan
-        $dpAmount = $totalPrice * 0.3; // <-- Simbol kali (*) ditambahkan
+        $totalPrice = $durationHours * $table->price_per_hour;
+        $dpAmount = $totalPrice * ($dpPercentage / 100);
 
         // 4. Simpan ke database (Tabel Bookings)
         $booking = \App\Models\Booking::create([

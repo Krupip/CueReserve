@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminBilliardTableController;
+ use App\Http\Controllers\AdminSettingController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Models\BilliardTable;
@@ -43,6 +44,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'index'])
         ->middleware(['auth', IsAdmin::class])
         ->name('admin.dashboard');
+
+    // Rute Pengaturan Admin
+    Route::get('/admin/settings', [AdminSettingController::class, 'index'])->name('admin.settings');
+    Route::patch('/admin/settings', [AdminSettingController::class, 'update'])->name('admin.settings.update');
 });
 
 require __DIR__ . '/auth.php';

@@ -32,7 +32,7 @@
 
         <!-- Form Booking dengan Alpine.js -->
         <div class="bg-white shadow-md rounded-b-xl p-6 border border-t-0 border-gray-200"
-            x-data="bookingCalculator({{ $billiardTable->price_per_hour }})">
+            x-data="bookingCalculator({{ $billiardTable->price_per_hour }}, {{ $dpPercentage }})">
 
             <form action="{{ route('bookings.store') }}" method="POST">
                 @csrf
@@ -116,7 +116,7 @@
                         <span x-text="formatRupiah(totalPrice)" class="font-medium"></span>
                     </div>
                     <div class="flex justify-between mt-2 pt-2 border-t font-bold text-blue-600 text-lg">
-                        <span>DP yang harus dibayar (30%):</span>
+                        <span>DP yang harus dibayar (<span x-text="dpPercentage"></span>%):</span>
                         <span x-text="formatRupiah(dp)"></span>
                     </div>
                 </div>
@@ -144,8 +144,9 @@
                 return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
             };
 
-            Alpine.data('bookingCalculator', (price) => ({
+            Alpine.data('bookingCalculator', (price, dpPercentage) => ({
                 pricePerHour: price,
+                dpPercentage: dpPercentage,
                 selectedDate: getTodayStr(), // Default hari ini menggunakan waktu lokal browser
                 today: getTodayStr(),
                 currentHour: new Date().getHours(), // Jam sesuai browser user
@@ -194,7 +195,7 @@
                     return this.hours * this.pricePerHour;
                 },
                 get dp() {
-                    return this.totalPrice * 0.3;
+                    return this.totalPrice * (this.dpPercentage / 100);
                 },
                 formatRupiah(number) {
                     return new Intl.NumberFormat('id-ID', {
