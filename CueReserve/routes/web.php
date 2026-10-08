@@ -13,29 +13,29 @@ use App\Http\Controllers\HomeController;
 Route::get('/', [HomeController::class, 'index'])->name('dashboard');
 
 // Rute Riwayat Booking User
-Route::get('/booking-history', function () {
-    $bookings = \App\Models\Booking::with('billiardTable')
-        ->where('user_id', auth()->id())
-        ->orderBy('created_at', 'desc')
-        ->get();
-        
-    return view('booking_history', compact('bookings'));
-})->middleware(['auth', 'verified'])->name('booking.history');
+Route::get('/booking-history', [BookingController::class, 'history'])
+    ->middleware(['auth', 'verified'])
+    ->name('booking.history');
 
 Route::middleware('auth')->group(function () {
+    // Rute Lanjutkan Pembayaran & Batal dari History
+    Route::get('/booking/{booking}/checkout', [BookingController::class, 'checkout'])->name('booking.checkout');
+    Route::post('/booking/{booking}/cancel', [BookingController::class, 'cancel'])->name('booking.cancel');
+
     // Rute untuk menampilkan form booking, dengan membawa ID meja yang dipilih
     Route::get('/booking/{billiardTable}', [BookingController::class, 'create'])->name('bookings.create');
 
     // Rute untuk memproses form booking (nanti kita buat fungsinya)
     Route::post('/booking', [BookingController::class, 'store'])->name('bookings.store');
 
+    // Rute fallback jika Midtrans melakukan redirect/reload (GET) ke /booking
+    Route::get('/booking', function () {
+        return redirect()->route('booking.history');
+    });
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
-    // Rute Form Booking Meja
-    Route::get('/book/{table}', [BookingController::class, 'create'])->name('book.create');
-    Route::post('/book/{table}', [BookingController::class, 'store'])->name('book.store');
 
     // Rute Admin Page
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');

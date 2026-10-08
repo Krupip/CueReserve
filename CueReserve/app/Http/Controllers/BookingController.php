@@ -12,6 +12,17 @@ use Midtrans\Snap;
 
 class BookingController extends Controller
 {
+    // Menampilkan riwayat pesanan (history) user
+    public function history()
+    {
+        $bookings = \App\Models\Booking::with('billiardTable')
+            ->where('user_id', auth()->id())
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('booking.history', compact('bookings'));
+    }
+
     // Menampilkan form booking untuk meja tertentu
     public function create(BilliardTable $billiardTable)
     {
@@ -103,8 +114,40 @@ class BookingController extends Controller
         // 8. Dapatkan Snap Token dari Midtrans
         $snapToken = \Midtrans\Snap::getSnapToken($params);
 
+        // Simpan snap_token ke database
+        $payment->update(['snap_token' => $snapToken]);
+
         // 9. Arahkan ke halaman Checkout (Pastikan nama foldernya 'bookings' pakai s)
         return view('booking.checkout', compact('booking', 'payment', 'snapToken'));
+    }
+
+    // Melanjutkan pembayaran dari riwayat
+    public function checkout(Booking $booking)
+    {
+        // Pastikan booking milik user yang login dan masih pending
+        if ($booking->user_id !== auth()->id() || $booking->status !== 'pending') {
+            return redirect()->route('booking.history')->with('error', 'Booking tidak valid atau sudah dibayar.');
+        }
+
+        $payment = $booking->payment;
+        $snapToken = $payment->snap_token;
+
+        return view('booking.checkout', compact('booking', 'payment', 'snapToken'));
+    }
+
+    // Membatalkan pesanan
+    public function cancel(Booking $booking)
+    {
+        if ($booking->user_id !== auth()->id() || $booking->status !== 'pending') {
+            return redirect()->route('booking.history')->with('error', 'Booking tidak valid atau sudah dibayar.');
+        }
+
+        $booking->update(['status' => 'cancelled']);
+        if ($booking->payment) {
+            $booking->payment->update(['transaction_status' => 'cancel']);
+        }
+
+        return redirect()->route('booking.history')->with('success', 'Booking berhasil dibatalkan.');
     }
 
     public function webhook(Request $request)

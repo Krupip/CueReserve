@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'gross_amount',
     'payment_type',
     'transaction_status',
+    'snap_token',
 ])]
 class Payment extends Model
 {

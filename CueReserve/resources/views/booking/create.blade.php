@@ -61,12 +61,16 @@
                                 </svg>
                             </button>
                             <ul x-show="openStart" style="display: none;" class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto py-1 text-sm">
-                                <template x-for="hour in availableStartHours" :key="hour">
+                                <template x-for="item in availableStartHours" :key="item.time">
                                     <!-- Jika jam mulai diubah, jam selesai otomatis di-reset agar tidak error -->
-                                    <li @click="startTime = hour; openStart = false; endTime = ''"
-                                        class="cursor-pointer select-none relative py-2 px-3 hover:bg-blue-600 hover:text-white"
-                                        :class="startTime === hour ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-900'"
-                                        x-text="hour">
+                                    <li @click="if(!item.isDisabled) { startTime = item.time; openStart = false; endTime = ''; }"
+                                        class="select-none relative py-2 px-3"
+                                        :class="{
+                                            'cursor-not-allowed text-gray-400 bg-gray-50': item.isDisabled,
+                                            'cursor-pointer hover:bg-blue-600 hover:text-white text-gray-900': !item.isDisabled,
+                                            'bg-blue-50 text-blue-700 font-semibold': startTime === item.time && !item.isDisabled
+                                        }"
+                                        x-text="item.time">
                                     </li>
                                 </template>
                                 <li x-show="availableStartHours.length === 0" class="py-2 px-3 text-gray-500 italic text-center">Meja tutup / Waktu habis</li>
@@ -135,23 +139,31 @@
     <!-- Script Logika Alpine.js -->
     <script>
         document.addEventListener('alpine:init', () => {
+            const getTodayStr = () => {
+                let d = new Date();
+                return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            };
+
             Alpine.data('bookingCalculator', (price) => ({
                 pricePerHour: price,
-                selectedDate: '{{ date('Y - m - d ') }}', // Default hari ini
-                serverToday: '{{ date('Y - m - d ') }}',
-                serverHour: {{date('H')}}, // Ambil jam server saat ini
+                selectedDate: getTodayStr(), // Default hari ini menggunakan waktu lokal browser
+                today: getTodayStr(),
+                currentHour: new Date().getHours(), // Jam sesuai browser user
                 startTime: '',
                 endTime: '',
 
-                // Menghasilkan jam mulai yang valid
+                // Menghasilkan jam mulai beserta status disabled
                 get availableStartHours() {
                     let hours = [];
-                    let isToday = this.selectedDate === this.serverToday;
+                    let isToday = this.selectedDate === this.today;
 
                     for (let i = 8; i <= 22; i++) {
-                        // Jika hari ini, buang jam yang lebih kecil atau sama dengan jam sekarang
-                        if (isToday && i <= this.serverHour) continue;
-                        hours.push(i.toString().padStart(2, '0') + ':00');
+                        // Jika hari ini, jam yang lebih kecil atau sama dengan jam sekarang di-disable
+                        let isDisabled = isToday && (i <= this.currentHour);
+                        hours.push({
+                            time: i.toString().padStart(2, '0') + ':00',
+                            isDisabled: isDisabled
+                        });
                     }
                     return hours;
                 },

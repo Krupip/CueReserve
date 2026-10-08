@@ -11,6 +11,6 @@ class HomeController extends Controller
     {
         // Hanya tampilkan meja yang statusnya aktif/tersedia
         $tables = BilliardTable::where('is_active', 1)->get();
-        return view('welcome', compact('tables'));
+        return view('home', compact('tables'));
     }
 }
