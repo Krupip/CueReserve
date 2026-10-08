@@ -1,4 +1,4 @@
-# CueReserve: Sistem Reservasi Meja Biliar Online Terintegrasi Payment Gateway (DP)
+# Rackly: Sistem Reservasi Meja Biliar Online Terintegrasi Payment Gateway (DP)
 
 ### Deskripsi Masalah
 Pengelolaan operasional *billiard pool/lounge* umumnya masih mengandalkan sistem *walk-in* atau reservasi manual melalui pesan instan (WhatsApp) dan buku catatan kasir. Metode konvensional ini menimbulkan sejumlah kendala:
@@ -149,7 +149,7 @@ Pengelolaan operasional *billiard pool/lounge* umumnya masih mengandalkan sistem
 - Structure:
 
 ```text
-CueReserve/
+Rackly/
   app/
     Http/
       Controllers/ (BookingController, etc.)
