@@ -109,6 +109,12 @@ class BookingController extends Controller
                 'first_name' => auth()->user()->name,
                 'email' => auth()->user()->email,
             ],
+            // Batas waktu pembayaran: 15 menit
+            'expiry' => [
+                'start_time' => now()->format('Y-m-d H:i:s O'),
+                'unit'       => 'minutes',
+                'duration'   => 15,
+            ],
         ];
 
         // 8. Dapatkan Snap Token dari Midtrans
